@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import ast
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import cast
 
 from epok_tdd.config import ArchitectureContract, Config
 from epok_tdd.models import AnalysisReport, Finding, FunctionMetric, Severity
@@ -158,6 +159,12 @@ class _CoverageFile:
         return len(relevant_executed) / total
 
 
+def _integer_lines(value: object) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in cast(list[object], value) if isinstance(item, int)]
+
+
 class _CoverageIndex:
     def __init__(self, files: dict[Path, _CoverageFile]) -> None:
         self._files = files
@@ -166,14 +173,19 @@ class _CoverageIndex:
     def load(cls, path: Path | None) -> _CoverageIndex:
         if path is None or not path.exists():
             return cls({})
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+        raw_files = raw.get("files", {})
+        if not isinstance(raw_files, dict):
+            return cls({})
+
         files: dict[Path, _CoverageFile] = {}
-        for name, data in raw.get("files", {}).items():
-            if not isinstance(data, dict):
+        for name, raw_data in cast(dict[object, object], raw_files).items():
+            if not isinstance(name, str) or not isinstance(raw_data, dict):
                 continue
+            data = cast(dict[str, object], raw_data)
             files[Path(name).resolve()] = _CoverageFile(
-                executed=frozenset(int(line) for line in data.get("executed_lines", [])),
-                missing=frozenset(int(line) for line in data.get("missing_lines", [])),
+                executed=frozenset(_integer_lines(data.get("executed_lines"))),
+                missing=frozenset(_integer_lines(data.get("missing_lines"))),
             )
         return cls(files)
 

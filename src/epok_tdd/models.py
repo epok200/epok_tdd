@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any
 
 
-JsonObject: TypeAlias = dict[str, Any]
+type JsonObject = dict[str, Any]
 
 
 class Severity(StrEnum):
@@ -73,8 +73,8 @@ class FunctionMetric:
 
 @dataclass(slots=True)
 class AnalysisReport:
-    findings: list[Finding] = field(default_factory=list)
-    metrics: list[FunctionMetric] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list[Finding])
+    metrics: list[FunctionMetric] = field(default_factory=list[FunctionMetric])
 
     def passed(self, fail_on: Severity = Severity.ERROR) -> bool:
         return not any(finding.severity.rank >= fail_on.rank for finding in self.findings)

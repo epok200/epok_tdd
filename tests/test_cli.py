@@ -18,7 +18,10 @@ def _write_project(tmp_path: Path, *, max_complexity: int = 10) -> Path:
     )
     specification = tmp_path / "spec.md"
     specification.write_text(
-        "# Feature\n\nStatus: Approved\n\n## Acceptance criteria\nWorks\n\n## Out of scope\nNothing\n",
+        (
+            "# Feature\n\nStatus: Approved\n\n"
+            "## Acceptance criteria\nWorks\n\n## Out of scope\nNothing\n"
+        ),
         encoding="utf-8",
     )
     pyproject = tmp_path / "pyproject.toml"
@@ -38,7 +41,10 @@ tests = ["{sys.executable}", "-c", "raise SystemExit(0)"]
     return pyproject
 
 
-def test_cli_check_supports_text_and_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_check_supports_text_and_json_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     pyproject = _write_project(tmp_path)
 
     assert main(["--config", str(pyproject), "check"]) == 0
@@ -63,7 +69,10 @@ def test_cli_creates_and_uses_baseline(tmp_path: Path, capsys: pytest.CaptureFix
     assert main(["--config", str(pyproject), "check", "--no-baseline"]) == 1
 
 
-def test_cli_gate_and_configuration_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_gate_and_configuration_errors(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     pyproject = _write_project(tmp_path)
 
     assert main(["--config", str(pyproject), "gate", "--mode", "quick"]) == 0

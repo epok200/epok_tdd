@@ -3,7 +3,7 @@ from __future__ import annotations
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 
 class ConfigError(ValueError):
@@ -39,22 +39,41 @@ class Config:
     architecture_contracts: tuple[ArchitectureContract, ...] = ()
 
 
-def _tuple_of_strings(value: Any, *, field_name: str) -> tuple[str, ...]:
+def _tuple_of_strings(value: object, *, field_name: str) -> tuple[str, ...]:
     if value is None:
         return ()
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+    if not isinstance(value, list):
         raise ConfigError(f"{field_name} must be an array of strings")
-    return tuple(value)
+    items = cast(list[object], value)
+    if not all(isinstance(item, str) for item in items):
+        raise ConfigError(f"{field_name} must be an array of strings")
+    return tuple(item for item in items if isinstance(item, str))
 
 
-def _table(parent: dict[str, Any], key: str, *, field_name: str) -> dict[str, Any]:
+def _table(parent: dict[str, object], key: str, *, field_name: str) -> dict[str, object]:
     value = parent.get(key, {})
     if not isinstance(value, dict):
         raise ConfigError(f"{field_name} must be a TOML table")
+    return cast(dict[str, object], value)
+
+
+def _integer(value: object, *, field_name: str, default: int) -> int:
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ConfigError(f"{field_name} must be an integer")
     return value
 
 
-def _load_commands(raw: dict[str, Any]) -> Commands:
+def _number(value: object, *, field_name: str, default: float) -> float:
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ConfigError(f"{field_name} must be a number")
+    return float(value)
+
+
+def _load_commands(raw: dict[str, object]) -> Commands:
     commands = _table(raw, "commands", field_name="[tool.epok-tdd.commands]")
     return Commands(
         tests=_tuple_of_strings(commands.get("tests"), field_name="commands.tests"),
@@ -64,19 +83,23 @@ def _load_commands(raw: dict[str, Any]) -> Commands:
     )
 
 
-def _load_contracts(raw: dict[str, Any]) -> tuple[ArchitectureContract, ...]:
+def _load_contracts(raw: dict[str, object]) -> tuple[ArchitectureContract, ...]:
     architecture = _table(raw, "architecture", field_name="[tool.epok-tdd.architecture]")
-    contracts = architecture.get("contracts", [])
-    if not isinstance(contracts, list):
+    contracts_value = architecture.get("contracts", [])
+    if not isinstance(contracts_value, list):
         raise ConfigError("architecture.contracts must be an array of tables")
 
     parsed: list[ArchitectureContract] = []
-    for contract in contracts:
-        if not isinstance(contract, dict) or not isinstance(contract.get("source"), str):
+    for raw_contract in cast(list[object], contracts_value):
+        if not isinstance(raw_contract, dict):
+            raise ConfigError("each architecture contract needs a string source")
+        contract = cast(dict[str, object], raw_contract)
+        source = contract.get("source")
+        if not isinstance(source, str):
             raise ConfigError("each architecture contract needs a string source")
         parsed.append(
             ArchitectureContract(
-                source=contract["source"],
+                source=source,
                 forbid=_tuple_of_strings(contract.get("forbid"), field_name="contract.forbid"),
             )
         )
@@ -93,12 +116,12 @@ def load_config(pyproject: Path = Path("pyproject.toml")) -> Config:
 
     root = pyproject.resolve().parent
     with pyproject.open("rb") as stream:
-        document = tomllib.load(stream)
+        document = cast(dict[str, object], tomllib.load(stream))
     tool = _table(document, "tool", field_name="[tool]")
     raw = _table(tool, "epok-tdd", field_name="[tool.epok-tdd]")
 
     fail_on = raw.get("fail_on", "error")
-    if fail_on not in {"review", "warning", "error"}:
+    if not isinstance(fail_on, str) or fail_on not in {"review", "warning", "error"}:
         raise ConfigError("fail_on must be one of: review, warning, error")
 
     raw_paths = _tuple_of_strings(raw.get("paths", ["src"]), field_name="paths")
@@ -106,10 +129,16 @@ def load_config(pyproject: Path = Path("pyproject.toml")) -> Config:
         paths=tuple(root / item for item in raw_paths),
         specification=_resolve_optional_path(root, raw.get("specification")),
         fail_on=fail_on,
-        max_complexity=int(raw.get("max_complexity", 10)),
-        max_crap=float(raw.get("max_crap", 30.0)),
-        max_parameters=int(raw.get("max_parameters", 6)),
-        max_type_depth=int(raw.get("max_type_depth", 3)),
+        max_complexity=_integer(
+            raw.get("max_complexity"), field_name="max_complexity", default=10
+        ),
+        max_crap=_number(raw.get("max_crap"), field_name="max_crap", default=30.0),
+        max_parameters=_integer(
+            raw.get("max_parameters"), field_name="max_parameters", default=6
+        ),
+        max_type_depth=_integer(
+            raw.get("max_type_depth"), field_name="max_type_depth", default=3
+        ),
         forbidden_module_names=_tuple_of_strings(
             raw.get("forbidden_module_names", ["utils", "helpers", "common", "misc"]),
             field_name="forbidden_module_names",

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import re
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from time import monotonic
-from typing import Callable
 
 from epok_tdd.config import Config
 from epok_tdd.models import AnalysisReport, Severity
@@ -31,7 +31,7 @@ class PhaseResult:
 
 @dataclass(slots=True)
 class GateResult:
-    phases: list[PhaseResult] = field(default_factory=list)
+    phases: list[PhaseResult] = field(default_factory=list[PhaseResult])
 
     @property
     def passed(self) -> bool:

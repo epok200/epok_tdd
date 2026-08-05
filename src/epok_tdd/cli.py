@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from epok_tdd.analysis import analyze_paths
 from epok_tdd.config import Config, ConfigError, load_config
@@ -31,7 +31,12 @@ def _print_findings(findings: list[Finding]) -> None:
             print(f"         ↳ {finding.suggestion}")
 
 
-def _effective_findings(report: AnalysisReport, config: Config, *, use_baseline: bool) -> list[Finding]:
+def _effective_findings(
+    report: AnalysisReport,
+    config: Config,
+    *,
+    use_baseline: bool,
+) -> list[Finding]:
     if use_baseline and config.baseline and config.baseline.exists():
         return compare_with_baseline(report, Baseline.load(config.baseline))
     return report.findings
