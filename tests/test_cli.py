@@ -9,7 +9,12 @@ import pytest
 from epok_tdd.cli import main
 
 
-def _write_project(tmp_path: Path, *, max_complexity: int = 10) -> Path:
+def _write_project(
+    tmp_path: Path,
+    *,
+    max_complexity: int = 10,
+    fail_on: str = "error",
+) -> Path:
     source = tmp_path / "src"
     source.mkdir()
     (source / "example.py").write_text(
@@ -24,6 +29,15 @@ def _write_project(tmp_path: Path, *, max_complexity: int = 10) -> Path:
         ),
         encoding="utf-8",
     )
+    coverage_writer = tmp_path / "write_coverage.py"
+    coverage_writer.write_text(
+        "from pathlib import Path\n"
+        "Path('coverage.json').write_text("
+        "'{\"files\": {\"src/example.py\": {\"executed_lines\": [1, 2], "
+        "\"missing_lines\": [], \"executed_branches\": [], "
+        "\"missing_branches\": []}}}')\n",
+        encoding="utf-8",
+    )
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         f"""
@@ -31,10 +45,11 @@ def _write_project(tmp_path: Path, *, max_complexity: int = 10) -> Path:
 paths = ["src"]
 specification = "spec.md"
 max_complexity = {max_complexity}
+fail_on = "{fail_on}"
 baseline = ".baseline.json"
 
 [tool.epok-tdd.commands]
-tests = ["{sys.executable}", "-c", "raise SystemExit(0)"]
+tests = ["{sys.executable}", "write_coverage.py"]
 """.strip(),
         encoding="utf-8",
     )
@@ -57,7 +72,7 @@ def test_cli_check_supports_text_and_json_output(
 
 
 def test_cli_creates_and_uses_baseline(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    pyproject = _write_project(tmp_path, max_complexity=0)
+    pyproject = _write_project(tmp_path, max_complexity=0, fail_on="warning")
     baseline = tmp_path / ".baseline.json"
 
     assert main(["--config", str(pyproject), "baseline", "create"]) == 0
@@ -80,6 +95,7 @@ def test_cli_gate_and_configuration_errors(
     assert "SPECIFICATION" not in output
     assert "PASSED" in output
     assert "SKIPPED mutation" in output
+    assert (tmp_path / "coverage.json").exists()
 
     with pytest.raises(SystemExit) as error:
         main(["--config", str(tmp_path / "missing.toml"), "check"])
