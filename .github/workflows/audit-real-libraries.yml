@@ -2,6 +2,11 @@ name: Audit real libraries
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/audit-real-libraries.yml"
+      - "src/**"
+      - "pyproject.toml"
   push:
     branches:
       - agent/foundation-quality-gate
