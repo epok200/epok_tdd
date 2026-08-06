@@ -9,7 +9,7 @@ import pytest
 from epok_tdd.analysis import analyze_paths
 from epok_tdd.config import Commands, Config
 from epok_tdd.models import AnalysisReport, Finding, FunctionMetric, Severity
-from epok_tdd.ratchet import Baseline, compare_with_baseline
+from epok_tdd.ratchet import Baseline, apply_baseline, compare_with_baseline
 from epok_tdd.workflow import run_gate
 
 
@@ -167,3 +167,29 @@ def test_gate_applies_baseline_instead_of_blocking_unchanged_debt(tmp_path: Path
     assert result.passed
     assert "0 effective" in result.phases[2].detail
     assert "1 total" in result.phases[2].detail
+
+
+def test_baseline_never_suppresses_integrity_failures(tmp_path: Path) -> None:
+    finding = Finding(
+        rule_id="EPK002",
+        message="coverage missing",
+        path=Path("coverage.json"),
+        line=1,
+        severity=Severity.ERROR,
+    )
+    baseline_path = tmp_path / "baseline.json"
+    Baseline.from_report(AnalysisReport(findings=[finding])).save(baseline_path)
+
+    effective = apply_baseline(AnalysisReport(findings=[finding]), baseline_path)
+
+    assert [item.rule_id for item in effective] == ["EPK002"]
+
+
+def test_malformed_baseline_becomes_a_blocking_finding(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text('{"version": 9}', encoding="utf-8")
+
+    effective = apply_baseline(AnalysisReport(), baseline_path)
+
+    assert [item.rule_id for item in effective] == ["EPK402"]
+    assert effective[0].severity is Severity.ERROR
