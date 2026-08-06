@@ -1,22 +1,33 @@
-name: Pull request validation
+name: Quality gate
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
   quality:
+    name: Python ${{ matrix.python }}
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           enable-cache: true
       - run: uv sync --all-groups
-      - run: uv run epok-tdd gate --mode quick
+      - name: Run deterministic quality gate
+        run: uv run epok-tdd gate --mode quick
+      - name: Build package
+        if: matrix.python == '3.12'
+        run: uv build
