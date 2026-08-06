@@ -42,10 +42,20 @@ def _effective_findings(
     return report.findings
 
 
+def _coverage_path(config: Config, value: Path | None) -> Path | None:
+    if value is None or value.is_absolute():
+        return value
+    return config.root / value
+
+
 def _run_check(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     paths = tuple(Path(path) for path in args.paths) if args.paths else config.paths
-    report = analyze_paths(paths, config=config, coverage_path=args.coverage)
+    report = analyze_paths(
+        paths,
+        config=config,
+        coverage_path=_coverage_path(config, args.coverage),
+    )
     findings = _effective_findings(report, config, use_baseline=not args.no_baseline)
     if args.format == "json":
         payload = report.to_dict()
@@ -60,7 +70,11 @@ def _run_check(args: argparse.Namespace) -> int:
 def _run_baseline(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     paths = tuple(Path(path) for path in args.paths) if args.paths else config.paths
-    report = analyze_paths(paths, config=config, coverage_path=args.coverage)
+    report = analyze_paths(
+        paths,
+        config=config,
+        coverage_path=_coverage_path(config, args.coverage),
+    )
     destination = args.output or config.baseline
     if destination is None:
         raise ConfigError("No baseline path configured; use --output")
@@ -77,7 +91,7 @@ def _run_gate(args: argparse.Namespace) -> int:
         analyzer=lambda: analyze_paths(
             config.paths,
             config=config,
-            coverage_path=args.coverage,
+            coverage_path=_coverage_path(config, args.coverage),
         ),
     )
     for phase in result.phases:
