@@ -35,6 +35,7 @@ forbid = ["fastapi", "sqlalchemy"]
 
     config = load_config(pyproject)
 
+    assert config.root == tmp_path
     assert config.paths == (tmp_path / "src", tmp_path / "packages/domain")
     assert config.specification == tmp_path / "docs/spec.md"
     assert config.fail_on == "warning"
@@ -64,6 +65,7 @@ def test_load_config_uses_safe_defaults(tmp_path: Path) -> None:
 
     config = load_config(pyproject)
 
+    assert config.root == tmp_path
     assert config.paths == (tmp_path / "src",)
     assert config.fail_on == "error"
     assert config.commands.tests == ()
