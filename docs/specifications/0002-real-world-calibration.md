@@ -22,6 +22,12 @@ When the report is missing, malformed, or contains no measured files
 Then Epok TDD emits a blocking deterministic finding
 And does not pretend that CRAP was evaluated.
 
+### Scenario: anchor external projects correctly
+
+Given a `pyproject.toml` outside the current working directory
+When Epok TDD runs tests, lint, typing, mutation, or resolves a relative coverage path
+Then every relative operation is anchored to the directory containing that configuration.
+
 ### Scenario: count meaningful parameters
 
 Given an instance or class method
@@ -41,6 +47,13 @@ Given a committed baseline
 When complexity or CRAP increases, coverage decreases, or measured coverage disappears
 Then Epok TDD emits a blocking metric-regression finding
 And the full gate evaluates effective findings after applying that baseline.
+
+### Scenario: preserve integrity across baselines
+
+Given a baseline containing existing design debt
+When the current analysis reports missing evidence, unreadable Python, forbidden architecture, metric regression, or an invalid baseline
+Then the baseline cannot suppress that integrity failure
+And an invalid baseline becomes a deterministic blocking finding instead of crashing the command.
 
 ### Scenario: harden the tests
 
