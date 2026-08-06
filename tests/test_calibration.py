@@ -178,7 +178,7 @@ def test_baseline_never_suppresses_integrity_failures(tmp_path: Path) -> None:
         severity=Severity.ERROR,
     )
     baseline_path = tmp_path / "baseline.json"
-    Baseline.from_report(AnalysisReport(findings=[finding])).save(baseline_path)
+    Baseline(findings={finding.identity: None}, metrics={}).save(baseline_path)
 
     effective = apply_baseline(AnalysisReport(findings=[finding]), baseline_path)
 
@@ -187,7 +187,10 @@ def test_baseline_never_suppresses_integrity_failures(tmp_path: Path) -> None:
 
 def test_malformed_baseline_becomes_a_blocking_finding(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
-    baseline_path.write_text('{"version": 9}', encoding="utf-8")
+    baseline_path.write_text(
+        '{"version": 9, "findings": {}, "metrics": {}}',
+        encoding="utf-8",
+    )
 
     effective = apply_baseline(AnalysisReport(), baseline_path)
 
