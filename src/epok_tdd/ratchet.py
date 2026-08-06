@@ -45,23 +45,19 @@ class Baseline:
         )
 
 
+def _number(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
 def _worsened(current: object, previous: object) -> bool:
+    current_number = _number(current)
+    previous_number = _number(previous)
     return (
-        isinstance(current, (int, float))
-        and not isinstance(current, bool)
-        and isinstance(previous, (int, float))
-        and not isinstance(previous, bool)
-        and current > previous
-    )
-
-
-def _decreased(current: object, previous: object) -> bool:
-    return (
-        isinstance(current, (int, float))
-        and not isinstance(current, bool)
-        and isinstance(previous, (int, float))
-        and not isinstance(previous, bool)
-        and current < previous
+        current_number is not None
+        and previous_number is not None
+        and current_number > previous_number
     )
 
 
@@ -70,18 +66,38 @@ def _metric_regressions(
     previous: dict[str, float | int | None],
 ) -> list[str]:
     regressions: list[str] = []
-    if _worsened(metric.complexity, previous.get("complexity")):
-        regressions.append(f"complexity {previous.get('complexity')}→{metric.complexity}")
-    if metric.coverage is None and previous.get("coverage") is not None:
-        regressions.append("coverage became unavailable")
-    elif _decreased(metric.coverage, previous.get("coverage")):
+    previous_complexity = _number(previous.get("complexity"))
+    current_complexity = _number(metric.complexity)
+    if (
+        previous_complexity is not None
+        and current_complexity is not None
+        and current_complexity > previous_complexity
+    ):
         regressions.append(
-            f"coverage {float(previous['coverage']):.3f}→{float(metric.coverage):.3f}"
+            f"complexity {previous_complexity:g}→{current_complexity:g}"
         )
-    if metric.crap is None and previous.get("crap") is not None:
+
+    previous_coverage = _number(previous.get("coverage"))
+    current_coverage = _number(metric.coverage)
+    if previous_coverage is not None and current_coverage is None:
+        regressions.append("coverage became unavailable")
+    elif (
+        previous_coverage is not None
+        and current_coverage is not None
+        and current_coverage < previous_coverage
+    ):
+        regressions.append(f"coverage {previous_coverage:.3f}→{current_coverage:.3f}")
+
+    previous_crap = _number(previous.get("crap"))
+    current_crap = _number(metric.crap)
+    if previous_crap is not None and current_crap is None:
         regressions.append("CRAP became unavailable")
-    elif _worsened(metric.crap, previous.get("crap")):
-        regressions.append(f"CRAP {float(previous['crap']):.3f}→{float(metric.crap):.3f}")
+    elif (
+        previous_crap is not None
+        and current_crap is not None
+        and current_crap > previous_crap
+    ):
+        regressions.append(f"CRAP {previous_crap:.3f}→{current_crap:.3f}")
     return regressions
 
 
