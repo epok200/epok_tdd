@@ -1,0 +1,161 @@
+name: Audit real libraries
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/foundation-quality-gate
+    paths:
+      - ".github/workflows/audit-real-libraries.yml"
+      - "src/**"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: epok-auth
+            repository: epok200/epok_auth
+            python: "3.12"
+            package: "epok-auth[postgres]"
+            import_name: epok_auth
+            pytest_command: >-
+              uv run pytest -m "not integration" --cov=epok_auth --cov-branch
+              --cov-report=json:coverage.json
+          - label: cortex-agent-sdk
+            repository: epok200/cortex_agent_sdk
+            python: "3.13"
+            package: "cortex-agent-sdk[all]"
+            import_name: cortex_agent_sdk
+            pytest_command: >-
+              uv run --with pytest-cov pytest -m "not smoke"
+              --cov=cortex_agent_sdk --cov-branch
+              --cov-report=json:coverage.json
+
+    steps:
+      - name: Check out Epok TDD
+        uses: actions/checkout@v6
+
+      - name: Check out target library
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.repository }}
+          ref: main
+          path: target
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Install Epok TDD
+        run: uv sync --all-groups
+
+      - name: Smoke-install published package
+        id: install
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          uv run --no-project --with '${{ matrix.package }}' python -c \
+            "import importlib, importlib.metadata as metadata; module = importlib.import_module('${{ matrix.import_name }}'); print('module:', module.__name__); print('version:', metadata.version('${{ matrix.label }}'))" \
+            2>&1 | tee target/install-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > target/install-exit-code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Install target development environment
+        working-directory: target
+        run: uv sync --all-groups
+
+      - name: Run target tests with branch coverage
+        id: tests
+        working-directory: target
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          ${{ matrix.pytest_command }} 2>&1 | tee test-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > test-exit-code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run Epok TDD audit
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          uv run epok-tdd \
+            --config target/pyproject.toml \
+            check target/src \
+            --coverage target/coverage.json \
+            --format json \
+            --no-baseline \
+            > target/epok-report.json
+          status=$?
+          echo "$status" > target/audit-exit-code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Build audit summary
+        shell: bash
+        env:
+          TARGET_LABEL: ${{ matrix.label }}
+          TARGET_REPOSITORY: ${{ matrix.repository }}
+          INSTALL_EXIT: ${{ steps.install.outputs.exit_code }}
+          TEST_EXIT: ${{ steps.tests.outputs.exit_code }}
+          AUDIT_EXIT: ${{ steps.audit.outputs.exit_code }}
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          target = Path("target")
+          report_path = target / "epok-report.json"
+          report = json.loads(report_path.read_text()) if report_path.exists() else {}
+          summary = {
+              "library": os.environ["TARGET_LABEL"],
+              "repository": os.environ["TARGET_REPOSITORY"],
+              "install_exit_code": int(os.environ.get("INSTALL_EXIT") or 999),
+              "tests_exit_code": int(os.environ.get("TEST_EXIT") or 999),
+              "audit_exit_code": int(os.environ.get("AUDIT_EXIT") or 999),
+              "finding_count": len(report.get("effective_findings", [])),
+              "metric_count": len(report.get("metrics", [])),
+          }
+          (target / "audit-summary.json").write_text(
+              json.dumps(summary, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(summary, indent=2))
+          PY
+
+      - name: Upload audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ matrix.label }}
+          path: |
+            target/audit-summary.json
+            target/epok-report.json
+            target/coverage.json
+            target/install-output.txt
+            target/install-exit-code.txt
+            target/test-output.txt
+            target/test-exit-code.txt
+            target/audit-exit-code.txt
+          if-no-files-found: warn
