@@ -129,42 +129,57 @@ def _worsened(current: object, previous: object) -> bool:
     )
 
 
+def _complexity_regression(
+    metric: FunctionMetric,
+    previous: dict[str, float | int | None],
+) -> str | None:
+    old = _number(previous.get("complexity"))
+    current = _number(metric.complexity)
+    if old is None or current is None or current <= old:
+        return None
+    return f"complexity {old:g}→{current:g}"
+
+
+def _coverage_regression(
+    metric: FunctionMetric,
+    previous: dict[str, float | int | None],
+) -> str | None:
+    old = _number(previous.get("coverage"))
+    current = _number(metric.coverage)
+    if old is None:
+        return None
+    if current is None:
+        return "coverage became unavailable"
+    if current < old:
+        return f"coverage {old:.3f}→{current:.3f}"
+    return None
+
+
+def _crap_regression(
+    metric: FunctionMetric,
+    previous: dict[str, float | int | None],
+) -> str | None:
+    old = _number(previous.get("crap"))
+    current = _number(metric.crap)
+    if old is None:
+        return None
+    if current is None:
+        return "CRAP became unavailable"
+    if current > old:
+        return f"CRAP {old:.3f}→{current:.3f}"
+    return None
+
+
 def _metric_regressions(
     metric: FunctionMetric,
     previous: dict[str, float | int | None],
 ) -> list[str]:
-    regressions: list[str] = []
-    previous_complexity = _number(previous.get("complexity"))
-    current_complexity = _number(metric.complexity)
-    if (
-        previous_complexity is not None
-        and current_complexity is not None
-        and current_complexity > previous_complexity
-    ):
-        regressions.append(f"complexity {previous_complexity:g}→{current_complexity:g}")
-
-    previous_coverage = _number(previous.get("coverage"))
-    current_coverage = _number(metric.coverage)
-    if previous_coverage is not None and current_coverage is None:
-        regressions.append("coverage became unavailable")
-    elif (
-        previous_coverage is not None
-        and current_coverage is not None
-        and current_coverage < previous_coverage
-    ):
-        regressions.append(f"coverage {previous_coverage:.3f}→{current_coverage:.3f}")
-
-    previous_crap = _number(previous.get("crap"))
-    current_crap = _number(metric.crap)
-    if previous_crap is not None and current_crap is None:
-        regressions.append("CRAP became unavailable")
-    elif (
-        previous_crap is not None
-        and current_crap is not None
-        and current_crap > previous_crap
-    ):
-        regressions.append(f"CRAP {previous_crap:.3f}→{current_crap:.3f}")
-    return regressions
+    candidates = (
+        _complexity_regression(metric, previous),
+        _coverage_regression(metric, previous),
+        _crap_regression(metric, previous),
+    )
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 def _metric_finding(metric: FunctionMetric, regressions: list[str]) -> Finding:
