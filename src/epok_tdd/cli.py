@@ -8,7 +8,7 @@ from pathlib import Path
 from epok_tdd.analysis import analyze_paths
 from epok_tdd.config import Config, ConfigError, load_config
 from epok_tdd.models import AnalysisReport, Finding, Severity
-from epok_tdd.ratchet import Baseline, compare_with_baseline
+from epok_tdd.ratchet import Baseline, apply_baseline
 from epok_tdd.workflow import GateMode, run_gate
 
 
@@ -38,7 +38,7 @@ def _effective_findings(
     use_baseline: bool,
 ) -> list[Finding]:
     if use_baseline and config.baseline and config.baseline.exists():
-        return compare_with_baseline(report, Baseline.load(config.baseline))
+        return apply_baseline(report, config.baseline)
     return report.findings
 
 
