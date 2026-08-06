@@ -19,6 +19,28 @@ permissions:
   contents: read
 
 jobs:
+  export-source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Epok TDD
+        uses: actions/checkout@v6
+      - name: Upload calibration source
+        uses: actions/upload-artifact@v4
+        with:
+          name: epok-tdd-calibration-source
+          path: |
+            .github/workflows
+            docs
+            src
+            tests
+            AGENTS.md
+            CHANGELOG.md
+            CONTRIBUTING.md
+            LICENSE
+            README.md
+            pyproject.toml
+          include-hidden-files: true
+
   audit:
     name: ${{ matrix.label }}
     runs-on: ubuntu-24.04
