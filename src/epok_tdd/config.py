@@ -26,6 +26,7 @@ class ArchitectureContract:
 
 @dataclass(frozen=True, slots=True)
 class Config:
+    root: Path = Path(".")
     paths: tuple[Path, ...] = (Path("src"),)
     specification: Path | None = None
     fail_on: str = "error"
@@ -126,6 +127,7 @@ def load_config(pyproject: Path = Path("pyproject.toml")) -> Config:
 
     raw_paths = _tuple_of_strings(raw.get("paths", ["src"]), field_name="paths")
     return Config(
+        root=root,
         paths=tuple(root / item for item in raw_paths),
         specification=_resolve_optional_path(root, raw.get("specification")),
         fail_on=fail_on,
