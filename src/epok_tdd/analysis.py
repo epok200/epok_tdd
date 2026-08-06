@@ -4,6 +4,7 @@ import ast
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
+from json import JSONDecodeError
 from pathlib import Path
 from typing import cast
 
@@ -111,6 +112,7 @@ def _annotation_root(node: ast.expr | None) -> str | None:
 class _Function:
     node: ast.FunctionDef | ast.AsyncFunctionDef
     symbol: str
+    is_method: bool
 
     @property
     def line(self) -> int:
@@ -124,12 +126,13 @@ class _Function:
 class _FunctionCollector(ast.NodeVisitor):
     def __init__(self) -> None:
         self.functions: list[_Function] = []
-        self._scope: list[str] = []
+        self._scope: list[tuple[str, str]] = []
 
     def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        symbol = ".".join((*self._scope, node.name))
-        self.functions.append(_Function(node=node, symbol=symbol))
-        self._scope.append(node.name)
+        symbol = ".".join((*[name for name, _ in self._scope], node.name))
+        is_method = bool(self._scope and self._scope[-1][1] == "class")
+        self.functions.append(_Function(node=node, symbol=symbol, is_method=is_method))
+        self._scope.append((node.name, "function"))
         self.generic_visit(node)
         self._scope.pop()
 
@@ -140,23 +143,33 @@ class _FunctionCollector(ast.NodeVisitor):
         self._visit_function(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self._scope.append(node.name)
+        self._scope.append((node.name, "class"))
         self.generic_visit(node)
         self._scope.pop()
 
 
+type Branch = tuple[int, int]
+
+
 @dataclass(frozen=True, slots=True)
 class _CoverageFile:
-    executed: frozenset[int]
-    missing: frozenset[int]
+    executed_lines: frozenset[int]
+    missing_lines: frozenset[int]
+    executed_branches: frozenset[Branch]
+    missing_branches: frozenset[Branch]
 
     def ratio(self, start: int, end: int) -> float | None:
-        relevant_executed = {line for line in self.executed if start <= line <= end}
-        relevant_missing = {line for line in self.missing if start <= line <= end}
-        total = len(relevant_executed) + len(relevant_missing)
-        if total == 0:
-            return None
-        return len(relevant_executed) / total
+        executed_lines = {line for line in self.executed_lines if start <= line <= end}
+        missing_lines = {line for line in self.missing_lines if start <= line <= end}
+        executed_branches = {
+            branch for branch in self.executed_branches if start <= branch[0] <= end
+        }
+        missing_branches = {
+            branch for branch in self.missing_branches if start <= branch[0] <= end
+        }
+        executed = len(executed_lines) + len(executed_branches)
+        total = executed + len(missing_lines) + len(missing_branches)
+        return executed / total if total else None
 
 
 def _integer_lines(value: object) -> list[int]:
@@ -165,28 +178,66 @@ def _integer_lines(value: object) -> list[int]:
     return [item for item in cast(list[object], value) if isinstance(item, int)]
 
 
+def _branches(value: object) -> list[Branch]:
+    if not isinstance(value, list):
+        return []
+    branches: list[Branch] = []
+    for raw_branch in cast(list[object], value):
+        if not isinstance(raw_branch, list) or len(raw_branch) != 2:
+            continue
+        start, end = cast(list[object], raw_branch)
+        if isinstance(start, int) and isinstance(end, int):
+            branches.append((start, end))
+    return branches
+
+
+def _coverage_source(root: Path, name: str) -> Path:
+    source = Path(name)
+    return source.resolve() if source.is_absolute() else (root / source).resolve()
+
+
+def _coverage_file(value: object) -> _CoverageFile | None:
+    if not isinstance(value, dict):
+        return None
+    data = cast(dict[str, object], value)
+    return _CoverageFile(
+        executed_lines=frozenset(_integer_lines(data.get("executed_lines"))),
+        missing_lines=frozenset(_integer_lines(data.get("missing_lines"))),
+        executed_branches=frozenset(_branches(data.get("executed_branches"))),
+        missing_branches=frozenset(_branches(data.get("missing_branches"))),
+    )
+
+
 class _CoverageIndex:
-    def __init__(self, files: dict[Path, _CoverageFile]) -> None:
+    def __init__(self, files: dict[Path, _CoverageFile], error: str | None = None) -> None:
         self._files = files
+        self.error = error
 
     @classmethod
     def load(cls, path: Path | None) -> _CoverageIndex:
-        if path is None or not path.exists():
+        if path is None:
             return cls({})
-        raw = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
-        raw_files = raw.get("files", {})
-        if not isinstance(raw_files, dict):
-            return cls({})
+        if not path.exists():
+            return cls({}, f"Coverage report not found: {path}")
+        try:
+            raw = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, JSONDecodeError, TypeError) as error:
+            return cls({}, f"Unable to read coverage report {path}: {error}")
 
+        raw_files = raw.get("files")
+        if not isinstance(raw_files, dict):
+            return cls({}, f"Coverage report has no valid files table: {path}")
+
+        root = path.resolve().parent
         files: dict[Path, _CoverageFile] = {}
         for name, raw_data in cast(dict[object, object], raw_files).items():
-            if not isinstance(name, str) or not isinstance(raw_data, dict):
+            if not isinstance(name, str):
                 continue
-            data = cast(dict[str, object], raw_data)
-            files[Path(name).resolve()] = _CoverageFile(
-                executed=frozenset(_integer_lines(data.get("executed_lines"))),
-                missing=frozenset(_integer_lines(data.get("missing_lines"))),
-            )
+            coverage_file = _coverage_file(raw_data)
+            if coverage_file is not None:
+                files[_coverage_source(root, name)] = coverage_file
+        if not files:
+            return cls({}, f"Coverage report contains no measured Python files: {path}")
         return cls(files)
 
     def for_path(self, path: Path) -> _CoverageFile | None:
@@ -215,15 +266,19 @@ def _iter_python_files(paths: Iterable[Path]) -> list[Path]:
     return sorted(files)
 
 
-def _parameter_count(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-    arguments = node.args
-    return (
+def _parameter_count(function: _Function) -> int:
+    arguments = function.node.args
+    count = (
         len(arguments.posonlyargs)
         + len(arguments.args)
         + len(arguments.kwonlyargs)
         + int(arguments.vararg is not None)
         + int(arguments.kwarg is not None)
     )
+    positional = (*arguments.posonlyargs, *arguments.args)
+    if function.is_method and positional and positional[0].arg in {"self", "cls"}:
+        count -= 1
+    return count
 
 
 def _all_annotations(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.expr]:
@@ -325,10 +380,21 @@ def _syntax_finding(path: Path, error: OSError | SyntaxError) -> Finding:
     )
 
 
+def _coverage_finding(coverage_path: Path, error: str) -> Finding:
+    return Finding(
+        rule_id="EPK002",
+        message=error,
+        path=_display_path(coverage_path),
+        line=1,
+        severity=Severity.ERROR,
+        suggestion="Generate a valid Coverage.py JSON report before evaluating CRAP.",
+    )
+
+
 def _signature_findings(path: Path, function: _Function, config: Config) -> list[Finding]:
     node = function.node
     findings: list[Finding] = []
-    parameters = _parameter_count(node)
+    parameters = _parameter_count(function)
     if parameters > config.max_parameters:
         findings.append(
             Finding(
@@ -391,7 +457,7 @@ def _risk_findings(
                 message=f"{function.symbol} exceeds cyclomatic complexity",
                 path=path,
                 line=function.line,
-                severity=Severity.ERROR,
+                severity=Severity.WARNING,
                 symbol=function.symbol,
                 observed=metric.complexity,
                 limit=config.max_complexity,
@@ -480,6 +546,9 @@ def analyze_paths(
     roots = tuple(Path(path) for path in paths)
     coverage = _CoverageIndex.load(coverage_path)
     report = AnalysisReport()
+    if coverage_path is not None and coverage.error is not None:
+        report.findings.append(_coverage_finding(coverage_path, coverage.error))
+
     for path in _iter_python_files(roots):
         file_report = _analyze_file(path, roots, config, coverage)
         report.findings.extend(file_report.findings)
