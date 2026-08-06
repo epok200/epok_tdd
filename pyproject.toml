@@ -69,7 +69,7 @@ mutate_only_covered_lines = true
 
 [tool.epok-tdd]
 paths = ["src"]
-specification = "docs/specifications/0001-foundation.md"
+specification = "docs/specifications/0002-real-world-calibration.md"
 fail_on = "error"
 max_complexity = 10
 max_crap = 30.0
