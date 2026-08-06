@@ -2,8 +2,7 @@ name: Export calibration source
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/export-source.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
