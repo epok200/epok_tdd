@@ -62,12 +62,23 @@ def validate_specification(path: Path | None) -> PhaseResult:
     return PhaseResult("specification", "passed", str(path))
 
 
-def _run_command(name: str, command: tuple[str, ...]) -> PhaseResult:
+def _run_command(
+    name: str,
+    command: tuple[str, ...],
+    *,
+    cwd: Path,
+) -> PhaseResult:
     if not command:
         return PhaseResult(name, "skipped", "No command configured")
     started = monotonic()
     try:
-        completed = subprocess.run(command, capture_output=True, text=True, check=False)
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=cwd,
+        )
     except OSError as error:
         return PhaseResult(name, "failed", str(error), monotonic() - started)
     output = (completed.stdout + completed.stderr).strip()
@@ -89,7 +100,7 @@ def run_gate(
 ) -> GateResult:
     result = GateResult()
     result.phases.append(validate_specification(config.specification))
-    result.phases.append(_run_command("tests", config.commands.tests))
+    result.phases.append(_run_command("tests", config.commands.tests, cwd=config.root))
 
     started = monotonic()
     analysis = analyzer()
@@ -105,10 +116,10 @@ def run_gate(
             monotonic() - started,
         )
     )
-    result.phases.append(_run_command("lint", config.commands.lint))
-    result.phases.append(_run_command("types", config.commands.types))
+    result.phases.append(_run_command("lint", config.commands.lint, cwd=config.root))
+    result.phases.append(_run_command("types", config.commands.types, cwd=config.root))
     if mode is GateMode.FULL:
-        result.phases.append(_run_command("mutation", config.commands.mutation))
+        result.phases.append(_run_command("mutation", config.commands.mutation, cwd=config.root))
     else:
         result.phases.append(
             PhaseResult("mutation", "skipped", "Quick mode; use --mode full for mutation testing")
