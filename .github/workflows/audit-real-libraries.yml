@@ -85,7 +85,7 @@ jobs:
 
       - name: Install target development environment
         working-directory: target
-        run: uv sync --all-groups
+        run: uv sync --all-groups --all-extras
 
       - name: Run target tests with branch coverage
         id: tests
@@ -97,6 +97,32 @@ jobs:
           ${{ matrix.pytest_command }} 2>&1 | tee test-output.txt
           status=${PIPESTATUS[0]}
           echo "$status" > test-exit-code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run target Ruff
+        id: lint
+        working-directory: target
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          uv run ruff check . 2>&1 | tee lint-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > lint-exit-code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run target Pyright
+        id: types
+        working-directory: target
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          uv run pyright 2>&1 | tee types-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > types-exit-code.txt
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -124,6 +150,8 @@ jobs:
           TARGET_REPOSITORY: ${{ matrix.repository }}
           INSTALL_EXIT: ${{ steps.install.outputs.exit_code }}
           TEST_EXIT: ${{ steps.tests.outputs.exit_code }}
+          LINT_EXIT: ${{ steps.lint.outputs.exit_code }}
+          TYPES_EXIT: ${{ steps.types.outputs.exit_code }}
           AUDIT_EXIT: ${{ steps.audit.outputs.exit_code }}
         run: |
           uv run python - <<'PY'
@@ -139,7 +167,10 @@ jobs:
               "repository": os.environ["TARGET_REPOSITORY"],
               "install_exit_code": int(os.environ.get("INSTALL_EXIT") or 999),
               "tests_exit_code": int(os.environ.get("TEST_EXIT") or 999),
+              "lint_exit_code": int(os.environ.get("LINT_EXIT") or 999),
+              "types_exit_code": int(os.environ.get("TYPES_EXIT") or 999),
               "audit_exit_code": int(os.environ.get("AUDIT_EXIT") or 999),
+              "coverage_present": (target / "coverage.json").exists(),
               "finding_count": len(report.get("effective_findings", [])),
               "metric_count": len(report.get("metrics", [])),
           }
@@ -162,5 +193,9 @@ jobs:
             target/install-exit-code.txt
             target/test-output.txt
             target/test-exit-code.txt
+            target/lint-output.txt
+            target/lint-exit-code.txt
+            target/types-output.txt
+            target/types-exit-code.txt
             target/audit-exit-code.txt
           if-no-files-found: warn
