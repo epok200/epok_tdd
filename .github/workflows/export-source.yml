@@ -1,0 +1,30 @@
+name: Export calibration source
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/export-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: epok-tdd-calibration-source
+          path: |
+            .github/workflows
+            docs
+            src
+            tests
+            AGENTS.md
+            CHANGELOG.md
+            CONTRIBUTING.md
+            LICENSE
+            README.md
+            pyproject.toml
+          include-hidden-files: true
