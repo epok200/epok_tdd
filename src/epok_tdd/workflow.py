@@ -10,7 +10,7 @@ from time import monotonic
 
 from epok_tdd.config import Config
 from epok_tdd.models import AnalysisReport, Finding, Severity
-from epok_tdd.ratchet import Baseline, compare_with_baseline
+from epok_tdd.ratchet import apply_baseline
 
 
 class GateMode(StrEnum):
@@ -89,7 +89,7 @@ def _run_command(
 def _effective_findings(config: Config, analysis: AnalysisReport) -> list[Finding]:
     if config.baseline is None or not config.baseline.exists():
         return analysis.findings
-    return compare_with_baseline(analysis, Baseline.load(config.baseline))
+    return apply_baseline(analysis, config.baseline)
 
 
 def run_gate(
