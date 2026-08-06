@@ -1,0 +1,85 @@
+[build-system]
+requires = ["uv_build>=0.11.32,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "epok-tdd"
+version = "0.1.0"
+description = "An executable quality constitution for Python code produced with coding agents."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Fernando Leon Franco" }]
+keywords = ["tdd", "code-quality", "crap", "mutation-testing", "ai-agents"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Quality Assurance",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.scripts]
+epok-tdd = "epok_tdd.cli:main"
+
+[dependency-groups]
+dev = [
+  "coverage>=7.10",
+  "mutmut>=3.3",
+  "pyright>=1.1.400",
+  "pytest>=8.4",
+  "pytest-cov>=6.2",
+  "ruff>=0.12",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src", "tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["epok_tdd"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 90
+
+[tool.mutmut]
+paths_to_mutate = ["src/epok_tdd/"]
+mutate_only_covered_lines = true
+
+[tool.epok-tdd]
+paths = ["src"]
+specification = "docs/specifications/0002-real-world-calibration.md"
+fail_on = "error"
+max_complexity = 10
+max_crap = 30.0
+max_parameters = 6
+max_type_depth = 3
+forbidden_module_names = ["utils", "helpers", "common", "misc"]
+baseline = ".epok-tdd-baseline.json"
+
+[tool.epok-tdd.commands]
+tests = ["pytest", "--cov=epok_tdd", "--cov-branch", "--cov-report=json:coverage.json"]
+lint = ["ruff", "check", "."]
+types = ["pyright"]
+mutation = ["mutmut", "run"]
