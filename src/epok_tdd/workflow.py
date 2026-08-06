@@ -9,7 +9,8 @@ from pathlib import Path
 from time import monotonic
 
 from epok_tdd.config import Config
-from epok_tdd.models import AnalysisReport, Severity
+from epok_tdd.models import AnalysisReport, Finding, Severity
+from epok_tdd.ratchet import Baseline, compare_with_baseline
 
 
 class GateMode(StrEnum):
@@ -74,6 +75,12 @@ def _run_command(name: str, command: tuple[str, ...]) -> PhaseResult:
     return PhaseResult(name, status, output, monotonic() - started)
 
 
+def _effective_findings(config: Config, analysis: AnalysisReport) -> list[Finding]:
+    if config.baseline is None or not config.baseline.exists():
+        return analysis.findings
+    return compare_with_baseline(analysis, Baseline.load(config.baseline))
+
+
 def run_gate(
     config: Config,
     *,
@@ -86,13 +93,15 @@ def run_gate(
 
     started = monotonic()
     analysis = analyzer()
-    fail_on = Severity(config.fail_on)
-    analysis_passed = analysis.passed(fail_on=fail_on)
+    findings = _effective_findings(config, analysis)
+    threshold = Severity(config.fail_on)
+    analysis_passed = not any(finding.severity.rank >= threshold.rank for finding in findings)
+    detail = f"{len(findings)} effective finding(s); {len(analysis.findings)} total"
     result.phases.append(
         PhaseResult(
             "cleaner-and-architect",
             "passed" if analysis_passed else "failed",
-            f"{len(analysis.findings)} finding(s)",
+            detail,
             monotonic() - started,
         )
     )
