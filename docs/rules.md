@@ -14,12 +14,19 @@ Epok TDD rules are intentionally few, deterministic, and evidence-backed. A rule
 | `EPK202` | error | CRAP exceeds the configured limit after combining complexity with measured test coverage. |
 | `EPK301` | error | A configured architecture boundary imports a forbidden dependency. |
 | `EPK401` | error | Complexity or CRAP increased, coverage decreased, or previously available evidence disappeared relative to the committed baseline. |
+| `EPK402` | error | The committed baseline is missing a supported schema or cannot be trusted. |
 
 ## Severity philosophy
 
 An **error** is objective enough to block automatically. A **warning** is a measurable design smell that deserves attention but may be justified by the domain. A **review** asks for human judgment because context can make the pattern legitimate.
 
 Complexity is a map, not a conviction. A complex function with strong tests can remain maintainable; CRAP and the quality ratchet determine whether its risk is unprotected or worsening.
+
+## Baseline policy
+
+The baseline can tolerate reviewed design debt while preventing regression. It never suppresses integrity failures: `EPK001`, `EPK002`, `EPK301`, `EPK401`, and `EPK402` remain effective on every run.
+
+A baseline is versioned and schema-validated. Invalid JSON, unsupported versions, malformed findings, and malformed metric tables become a blocking `EPK402` finding instead of crashing the CLI or silently disabling the ratchet.
 
 ## CRAP coverage model
 
