@@ -1,0 +1,486 @@
+{
+  "findings": {},
+  "metrics": {
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.__init__": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_Assert": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_AsyncFor": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_AsyncFunctionDef": {
+      "complexity": 1,
+      "coverage": 0.5,
+      "crap": 1.125
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_BoolOp": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_ExceptHandler": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_For": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_FunctionDef": {
+      "complexity": 1,
+      "coverage": 0.5,
+      "crap": 1.125
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_If": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_IfExp": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_Lambda": {
+      "complexity": 1,
+      "coverage": 0.5,
+      "crap": 1.125
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_Match": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_While": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_ComplexityVisitor.visit_comprehension": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_Function.end_line": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/analysis.py:_Function.line": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_FunctionCollector.__init__": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_FunctionCollector._visit_function": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/analysis.py:_FunctionCollector.visit_AsyncFunctionDef": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_FunctionCollector.visit_ClassDef": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_FunctionCollector.visit_FunctionDef": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_all_annotations": {
+      "complexity": 8,
+      "coverage": 0.8181818181818182,
+      "crap": 8.384673178061608
+    },
+    "src/epok_tdd/analysis.py:_analyze_file": {
+      "complexity": 8,
+      "coverage": 1.0,
+      "crap": 8.0
+    },
+    "src/epok_tdd/analysis.py:_annotation_root": {
+      "complexity": 4,
+      "coverage": 0.5714285714285714,
+      "crap": 5.259475218658892
+    },
+    "src/epok_tdd/analysis.py:_architecture_findings": {
+      "complexity": 9,
+      "coverage": 0.8333333333333334,
+      "crap": 9.375
+    },
+    "src/epok_tdd/analysis.py:_coverage_finding": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_display_path": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/analysis.py:_function_metric": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/analysis.py:_generic_module_finding": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/analysis.py:_import_targets": {
+      "complexity": 6,
+      "coverage": 1.0,
+      "crap": 6.0
+    },
+    "src/epok_tdd/analysis.py:_iter_python_files": {
+      "complexity": 8,
+      "coverage": 0.9285714285714286,
+      "crap": 8.02332361516035
+    },
+    "src/epok_tdd/analysis.py:_missing_source_coverage_finding": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:_module_name": {
+      "complexity": 6,
+      "coverage": 0.6842105263157895,
+      "crap": 7.133692958157166
+    },
+    "src/epok_tdd/analysis.py:_parameter_count": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/analysis.py:_risk_findings": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/analysis.py:_signature_findings": {
+      "complexity": 7,
+      "coverage": 1.0,
+      "crap": 7.0
+    },
+    "src/epok_tdd/analysis.py:_syntax_finding": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/analysis.py:analyze_paths": {
+      "complexity": 5,
+      "coverage": 1.0,
+      "crap": 5.0
+    },
+    "src/epok_tdd/analysis.py:annotation_depth": {
+      "complexity": 7,
+      "coverage": 1.0,
+      "crap": 7.0
+    },
+    "src/epok_tdd/analysis.py:crap_score": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/analysis.py:cyclomatic_complexity": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/cli.py:_coverage_path": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/cli.py:_effective_findings": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/cli.py:_print_findings": {
+      "complexity": 7,
+      "coverage": 0.875,
+      "crap": 7.095703125
+    },
+    "src/epok_tdd/cli.py:_run_baseline": {
+      "complexity": 3,
+      "coverage": 0.8333333333333334,
+      "crap": 3.0416666666666665
+    },
+    "src/epok_tdd/cli.py:_run_check": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/cli.py:_run_gate": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/cli.py:_source_paths": {
+      "complexity": 5,
+      "coverage": 1.0,
+      "crap": 5.0
+    },
+    "src/epok_tdd/cli.py:build_parser": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/cli.py:main": {
+      "complexity": 2,
+      "coverage": 0.875,
+      "crap": 2.0078125
+    },
+    "src/epok_tdd/config.py:_integer": {
+      "complexity": 4,
+      "coverage": 0.8,
+      "crap": 4.128
+    },
+    "src/epok_tdd/config.py:_load_commands": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/config.py:_load_contracts": {
+      "complexity": 5,
+      "coverage": 0.9130434782608695,
+      "crap": 5.0164379058107995
+    },
+    "src/epok_tdd/config.py:_number": {
+      "complexity": 4,
+      "coverage": 0.8,
+      "crap": 4.128
+    },
+    "src/epok_tdd/config.py:_resolve_optional_path": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/config.py:_table": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/config.py:_tuple_of_strings": {
+      "complexity": 7,
+      "coverage": 0.8666666666666667,
+      "crap": 7.116148148148148
+    },
+    "src/epok_tdd/config.py:load_config": {
+      "complexity": 5,
+      "coverage": 1.0,
+      "crap": 5.0
+    },
+    "src/epok_tdd/coverage_data.py:CoverageFile.ratio": {
+      "complexity": 10,
+      "coverage": 1.0,
+      "crap": 10.0
+    },
+    "src/epok_tdd/coverage_data.py:CoverageIndex.__init__": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/coverage_data.py:CoverageIndex.for_path": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/coverage_data.py:CoverageIndex.load": {
+      "complexity": 10,
+      "coverage": 0.8333333333333334,
+      "crap": 10.462962962962962
+    },
+    "src/epok_tdd/coverage_data.py:_branches": {
+      "complexity": 7,
+      "coverage": 0.7916666666666666,
+      "crap": 7.443070023148149
+    },
+    "src/epok_tdd/coverage_data.py:_coverage_file": {
+      "complexity": 2,
+      "coverage": 0.7142857142857143,
+      "crap": 2.0932944606413995
+    },
+    "src/epok_tdd/coverage_data.py:_coverage_source": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/coverage_data.py:_integer_lines": {
+      "complexity": 4,
+      "coverage": 0.6666666666666666,
+      "crap": 4.592592592592593
+    },
+    "src/epok_tdd/models.py:AnalysisReport.passed": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/models.py:AnalysisReport.to_dict": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/models.py:Finding.identity": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/models.py:Finding.to_dict": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/models.py:FunctionMetric.identity": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/models.py:FunctionMetric.to_dict": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/models.py:Severity.rank": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/ratchet.py:Baseline.from_report": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/ratchet.py:Baseline.load": {
+      "complexity": 4,
+      "coverage": 0.8666666666666667,
+      "crap": 4.037925925925926
+    },
+    "src/epok_tdd/ratchet.py:Baseline.save": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/ratchet.py:_baseline_error_finding": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/ratchet.py:_baseline_scalar": {
+      "complexity": 5,
+      "coverage": 0.8,
+      "crap": 5.2
+    },
+    "src/epok_tdd/ratchet.py:_complexity_regression": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/ratchet.py:_coverage_regression": {
+      "complexity": 4,
+      "coverage": 0.875,
+      "crap": 4.03125
+    },
+    "src/epok_tdd/ratchet.py:_crap_regression": {
+      "complexity": 4,
+      "coverage": 0.875,
+      "crap": 4.03125
+    },
+    "src/epok_tdd/ratchet.py:_metric_finding": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/ratchet.py:_metric_regressions": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/ratchet.py:_metric_scalar": {
+      "complexity": 4,
+      "coverage": 0.8,
+      "crap": 4.128
+    },
+    "src/epok_tdd/ratchet.py:_number": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/ratchet.py:_parse_findings": {
+      "complexity": 4,
+      "coverage": 0.7333333333333333,
+      "crap": 4.303407407407407
+    },
+    "src/epok_tdd/ratchet.py:_parse_metrics": {
+      "complexity": 6,
+      "coverage": 0.8095238095238095,
+      "crap": 6.248785228377065
+    },
+    "src/epok_tdd/ratchet.py:_worsened": {
+      "complexity": 3,
+      "coverage": 1.0,
+      "crap": 3.0
+    },
+    "src/epok_tdd/ratchet.py:apply_baseline": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/ratchet.py:compare_with_baseline": {
+      "complexity": 8,
+      "coverage": 1.0,
+      "crap": 8.0
+    },
+    "src/epok_tdd/workflow.py:GateResult.passed": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/workflow.py:PhaseResult.passed": {
+      "complexity": 1,
+      "coverage": 1.0,
+      "crap": 1.0
+    },
+    "src/epok_tdd/workflow.py:_effective_findings": {
+      "complexity": 2,
+      "coverage": 1.0,
+      "crap": 2.0
+    },
+    "src/epok_tdd/workflow.py:_run_command": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/workflow.py:run_gate": {
+      "complexity": 4,
+      "coverage": 1.0,
+      "crap": 4.0
+    },
+    "src/epok_tdd/workflow.py:validate_specification": {
+      "complexity": 7,
+      "coverage": 0.9047619047619048,
+      "crap": 7.042328042328042
+    }
+  },
+  "version": 1
+}
