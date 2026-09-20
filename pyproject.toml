@@ -29,7 +29,7 @@ epok-tdd = "epok_tdd.cli:main"
 [dependency-groups]
 dev = [
   "coverage>=7.10",
-  "mutmut>=3.3",
+  "mutmut>=3.6",
   "pyright>=1.1.400",
   "pytest>=8.4",
   "pytest-cov>=6.2",
@@ -64,7 +64,7 @@ skip_covered = true
 fail_under = 90
 
 [tool.mutmut]
-paths_to_mutate = ["src/epok_tdd/"]
+source_paths = ["src/epok_tdd/"]
 mutate_only_covered_lines = true
 
 [tool.epok-tdd]

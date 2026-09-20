@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, cast
+from typing import Self, cast
 
 from epok_tdd.models import AnalysisReport, Finding, FunctionMetric, Severity
 
@@ -21,7 +19,7 @@ class Baseline:
     metrics: dict[str, dict[str, float | int | None]]
 
     @classmethod
-    def from_report(cls, report: AnalysisReport) -> Baseline:
+    def from_report(cls, report: AnalysisReport) -> Self:
         return cls(
             findings={
                 finding.identity: finding.observed
@@ -39,7 +37,7 @@ class Baseline:
         )
 
     @classmethod
-    def load(cls, path: Path) -> Baseline:
+    def load(cls, path: Path) -> Self:
         try:
             raw_value: object = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, JSONDecodeError) as error:
@@ -105,6 +103,9 @@ def _parse_metrics(
         if not isinstance(identity, str) or not isinstance(raw_metric, dict):
             raise BaselineError(f"Quality baseline metrics are malformed: {path}")
         metric = cast(dict[str, object], raw_metric)
+        required = {"complexity", "coverage", "crap"}
+        if not required.issubset(metric):
+            raise BaselineError(f"Quality baseline metrics are incomplete: {path}")
         metrics[identity] = {
             "complexity": _metric_scalar(metric.get("complexity")),
             "coverage": _metric_scalar(metric.get("coverage")),

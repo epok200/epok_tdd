@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path
@@ -14,6 +12,7 @@ def _write_project(
     *,
     max_complexity: int = 10,
     fail_on: str = "error",
+    include_baseline: bool = False,
 ) -> Path:
     source = tmp_path / "src"
     source.mkdir()
@@ -39,6 +38,7 @@ def _write_project(
         encoding="utf-8",
     )
     pyproject = tmp_path / "pyproject.toml"
+    baseline = 'baseline = ".baseline.json"' if include_baseline else ""
     pyproject.write_text(
         f"""
 [tool.epok-tdd]
@@ -46,7 +46,7 @@ paths = ["src"]
 specification = "spec.md"
 max_complexity = {max_complexity}
 fail_on = "{fail_on}"
-baseline = ".baseline.json"
+{baseline}
 
 [tool.epok-tdd.commands]
 tests = ["{sys.executable}", "write_coverage.py"]
@@ -71,8 +71,30 @@ def test_cli_check_supports_text_and_json_output(
     assert payload["metrics"][0]["symbol"] == "identity"
 
 
+def test_cli_resolves_explicit_paths_from_configured_root(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pyproject = _write_project(tmp_path)
+    runner = tmp_path / "runner"
+    runner.mkdir()
+    monkeypatch.chdir(runner)
+
+    assert main(["--config", str(pyproject), "check", "src", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["metrics"][0]["path"] == "src/example.py"
+    assert payload["metrics"][0]["symbol"] == "identity"
+
+
 def test_cli_creates_and_uses_baseline(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    pyproject = _write_project(tmp_path, max_complexity=0, fail_on="warning")
+    pyproject = _write_project(
+        tmp_path,
+        max_complexity=0,
+        fail_on="warning",
+        include_baseline=True,
+    )
     baseline = tmp_path / ".baseline.json"
 
     assert main(["--config", str(pyproject), "baseline", "create"]) == 0
@@ -81,6 +103,16 @@ def test_cli_creates_and_uses_baseline(tmp_path: Path, capsys: pytest.CaptureFix
 
     assert main(["--config", str(pyproject), "check"]) == 0
     assert "quality gate passed" in capsys.readouterr().out.lower()
+    assert main(["--config", str(pyproject), "check", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["passed"] is True
+    assert payload["findings"]
+    assert payload["effective_findings"] == []
+    assert main(
+        ["--config", str(pyproject), "check", "--format", "json", "--no-baseline"]
+    ) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["passed"] is False
     assert main(["--config", str(pyproject), "check", "--no-baseline"]) == 1
 
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path
@@ -62,6 +60,43 @@ def test_explicit_missing_or_empty_coverage_is_an_error(tmp_path: Path) -> None:
     empty_path.write_text('{"files": {}}', encoding="utf-8")
     empty = analyze_paths(config.paths, config=config, coverage_path=empty_path)
     assert any(finding.rule_id == "EPK002" for finding in empty.findings)
+
+    invalid_root_path = tmp_path / "invalid-root.json"
+    invalid_root_path.write_text("[]", encoding="utf-8")
+    invalid_root = analyze_paths(
+        config.paths,
+        config=config,
+        coverage_path=invalid_root_path,
+    )
+    assert [finding.rule_id for finding in invalid_root.findings] == ["EPK002"]
+
+
+def test_explicit_coverage_must_measure_each_analyzed_source(tmp_path: Path) -> None:
+    measured = tmp_path / "measured.py"
+    measured.write_text("def measured():\n    return True\n", encoding="utf-8")
+    omitted = tmp_path / "omitted.py"
+    omitted.write_text("def omitted():\n    return True\n", encoding="utf-8")
+    coverage_path = tmp_path / "coverage.json"
+    coverage_path.write_text(
+        json.dumps(
+            {
+                "files": {
+                    str(measured): {
+                        "executed_lines": [1, 2],
+                        "missing_lines": [],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = Config(paths=(tmp_path,))
+
+    report = analyze_paths(config.paths, config=config, coverage_path=coverage_path)
+
+    finding = next(item for item in report.findings if item.path == omitted)
+    assert finding.rule_id == "EPK002"
+    assert finding.severity is Severity.ERROR
 
 
 def test_method_receiver_does_not_count_as_business_parameter(tmp_path: Path) -> None:
@@ -169,6 +204,24 @@ def test_gate_applies_baseline_instead_of_blocking_unchanged_debt(tmp_path: Path
     assert "1 total" in result.phases[2].detail
 
 
+def test_gate_rejects_a_configured_missing_baseline(tmp_path: Path) -> None:
+    specification = tmp_path / "spec.md"
+    specification.write_text(
+        "# Feature\n\nStatus: Approved\n\n## Acceptance criteria\nYes\n\n## Out of scope\nNo\n",
+        encoding="utf-8",
+    )
+    config = Config(
+        paths=(tmp_path,),
+        specification=specification,
+        baseline=tmp_path / "missing-baseline.json",
+    )
+
+    result = run_gate(config, analyzer=AnalysisReport)
+
+    assert not result.passed
+    assert "1 effective" in result.phases[2].detail
+
+
 def test_baseline_never_suppresses_integrity_failures(tmp_path: Path) -> None:
     finding = Finding(
         rule_id="EPK002",
@@ -196,3 +249,21 @@ def test_malformed_baseline_becomes_a_blocking_finding(tmp_path: Path) -> None:
 
     assert [item.rule_id for item in effective] == ["EPK402"]
     assert effective[0].severity is Severity.ERROR
+
+
+def test_baseline_requires_complete_metric_records(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "findings": {},
+                "metrics": {"src/a.py:work": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    effective = apply_baseline(AnalysisReport(), baseline_path)
+
+    assert [item.rule_id for item in effective] == ["EPK402"]

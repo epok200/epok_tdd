@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 
 from epok_tdd.config import Commands, Config
-from epok_tdd.models import AnalysisReport
+from epok_tdd.models import AnalysisReport, Finding, Severity
 from epok_tdd.workflow import GateMode, run_gate, validate_specification
 
 
@@ -115,6 +113,28 @@ def test_full_gate_runs_mutation_and_reports_command_failures(tmp_path: Path) ->
     assert result.phases[-1].status == "failed"
     assert "mutant survived" in result.phases[-1].detail
     assert result.phases[3].status == "skipped"
+
+
+def test_gate_fails_when_analysis_reaches_configured_threshold(tmp_path: Path) -> None:
+    specification = tmp_path / "spec.md"
+    specification.write_text(
+        "# Feature\n\nStatus: Approved\n\n## Acceptance criteria\nYes\n\n## Out of scope\nNo\n",
+        encoding="utf-8",
+    )
+    finding = Finding(
+        rule_id="EPK202",
+        message="unprotected complexity",
+        path=Path("src/feature.py"),
+        line=1,
+        severity=Severity.ERROR,
+    )
+    config = Config(paths=(tmp_path,), specification=specification)
+
+    result = run_gate(config, analyzer=lambda: AnalysisReport(findings=[finding]))
+
+    assert not result.passed
+    assert result.phases[2].name == "cleaner-and-architect"
+    assert result.phases[2].status == "failed"
 
 
 def test_gate_reports_missing_executable(tmp_path: Path) -> None:

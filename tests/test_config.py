@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
 
-from epok_tdd.config import ConfigError, load_config
+from epok_tdd.config import Commands, ConfigError, load_config
 
 
 def test_load_config_resolves_paths_and_commands_from_pyproject(tmp_path: Path) -> None:
@@ -24,6 +22,8 @@ baseline = ".quality.json"
 
 [tool.epok-tdd.commands]
 tests = ["pytest", "-q"]
+lint = ["ruff", "check", "."]
+types = ["pyright"]
 mutation = ["mutmut", "run"]
 
 [[tool.epok-tdd.architecture.contracts]]
@@ -39,8 +39,17 @@ forbid = ["fastapi", "sqlalchemy"]
     assert config.paths == (tmp_path / "src", tmp_path / "packages/domain")
     assert config.specification == tmp_path / "docs/spec.md"
     assert config.fail_on == "warning"
+    assert config.max_complexity == 8
+    assert config.max_crap == 20.5
+    assert config.max_parameters == 5
+    assert config.max_type_depth == 2
+    assert config.forbidden_module_names == ("utils",)
+    assert config.baseline == tmp_path / ".quality.json"
     assert config.commands.tests == ("pytest", "-q")
+    assert config.commands.lint == ("ruff", "check", ".")
+    assert config.commands.types == ("pyright",)
     assert config.commands.mutation == ("mutmut", "run")
+    assert len(config.architecture_contracts) == 1
     assert config.architecture_contracts[0].source == "domain"
     assert config.architecture_contracts[0].forbid == ("fastapi", "sqlalchemy")
 
@@ -67,8 +76,16 @@ def test_load_config_uses_safe_defaults(tmp_path: Path) -> None:
 
     assert config.root == tmp_path
     assert config.paths == (tmp_path / "src",)
+    assert config.specification is None
     assert config.fail_on == "error"
-    assert config.commands.tests == ()
+    assert config.max_complexity == 10
+    assert config.max_crap == 30.0
+    assert config.max_parameters == 6
+    assert config.max_type_depth == 3
+    assert config.forbidden_module_names == ("utils", "helpers", "common", "misc")
+    assert config.baseline is None
+    assert config.commands == Commands()
+    assert config.architecture_contracts == ()
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 import json
 from pathlib import Path
@@ -14,6 +12,8 @@ def test_crap_score_rewards_coverage_without_hiding_complexity() -> None:
     assert crap_score(complexity=10, coverage=0.0) == 110.0
     assert crap_score(complexity=10, coverage=0.8) == pytest.approx(10.8)
     assert crap_score(complexity=31, coverage=1.0) == 31.0
+    assert crap_score(complexity=10, coverage=-1.0) == 110.0
+    assert crap_score(complexity=31, coverage=2.0) == 31.0
 
 
 def test_cyclomatic_complexity_counts_independent_decisions() -> None:
@@ -31,6 +31,19 @@ def classify(values):
 
     assert isinstance(function, ast.FunctionDef)
     assert cyclomatic_complexity(function) == 5
+
+
+def test_cyclomatic_complexity_counts_async_loops() -> None:
+    function = ast.parse(
+        """
+async def consume(stream):
+    async for item in stream:
+        await item.save()
+"""
+    ).body[0]
+
+    assert isinstance(function, ast.AsyncFunctionDef)
+    assert cyclomatic_complexity(function) == 2
 
 
 def test_annotation_depth_exposes_anonymous_nested_contracts() -> None:
@@ -233,6 +246,24 @@ def test_analysis_uses_repository_relative_paths_for_portable_baselines(
     source.write_text("def feature():\n    return True\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     config = Config(paths=(tmp_path / "src",))
+
+    report = analyze_paths(config.paths, config=config)
+
+    assert report.metrics[0].path == Path("src/feature.py")
+
+
+def test_analysis_uses_configured_root_when_run_outside_project(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    source = project / "src" / "feature.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("def feature():\n    return True\n", encoding="utf-8")
+    runner = tmp_path / "runner"
+    runner.mkdir()
+    monkeypatch.chdir(runner)
+    config = Config(root=project, paths=(project / "src",))
 
     report = analyze_paths(config.paths, config=config)
 

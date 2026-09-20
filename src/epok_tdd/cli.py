@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import json
 from collections.abc import Sequence
@@ -37,7 +35,7 @@ def _effective_findings(
     *,
     use_baseline: bool,
 ) -> list[Finding]:
-    if use_baseline and config.baseline and config.baseline.exists():
+    if use_baseline and config.baseline is not None:
         return apply_baseline(report, config.baseline)
     return report.findings
 
@@ -48,28 +46,37 @@ def _coverage_path(config: Config, value: Path | None) -> Path | None:
     return config.root / value
 
 
+def _source_paths(config: Config, values: Sequence[str]) -> tuple[Path, ...]:
+    if not values:
+        return config.paths
+    paths = (Path(value) for value in values)
+    return tuple(path if path.is_absolute() else config.root / path for path in paths)
+
+
 def _run_check(args: argparse.Namespace) -> int:
     config = load_config(args.config)
-    paths = tuple(Path(path) for path in args.paths) if args.paths else config.paths
+    paths = _source_paths(config, args.paths)
     report = analyze_paths(
         paths,
         config=config,
         coverage_path=_coverage_path(config, args.coverage),
     )
     findings = _effective_findings(report, config, use_baseline=not args.no_baseline)
+    threshold = Severity(config.fail_on)
+    passed = not any(finding.severity.rank >= threshold.rank for finding in findings)
     if args.format == "json":
         payload = report.to_dict()
+        payload["passed"] = passed
         payload["effective_findings"] = [finding.to_dict() for finding in findings]
         print(json.dumps(payload, indent=2))
     else:
         _print_findings(findings)
-    threshold = Severity(config.fail_on)
-    return int(any(finding.severity.rank >= threshold.rank for finding in findings))
+    return int(not passed)
 
 
 def _run_baseline(args: argparse.Namespace) -> int:
     config = load_config(args.config)
-    paths = tuple(Path(path) for path in args.paths) if args.paths else config.paths
+    paths = _source_paths(config, args.paths)
     report = analyze_paths(
         paths,
         config=config,

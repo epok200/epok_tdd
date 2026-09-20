@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path

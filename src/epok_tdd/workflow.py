@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 import subprocess
 from collections.abc import Callable
@@ -87,7 +85,7 @@ def _run_command(
 
 
 def _effective_findings(config: Config, analysis: AnalysisReport) -> list[Finding]:
-    if config.baseline is None or not config.baseline.exists():
+    if config.baseline is None:
         return analysis.findings
     return apply_baseline(analysis, config.baseline)
 

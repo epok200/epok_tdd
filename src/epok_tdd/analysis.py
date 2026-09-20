@@ -1,14 +1,10 @@
-from __future__ import annotations
-
 import ast
-import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from json import JSONDecodeError
 from pathlib import Path
-from typing import cast
 
 from epok_tdd.config import ArchitectureContract, Config
+from epok_tdd.coverage_data import CoverageFile, CoverageIndex
 from epok_tdd.models import AnalysisReport, Finding, FunctionMetric, Severity
 
 _MAPPING_NAMES = {"dict", "Dict", "Mapping", "MutableMapping"}
@@ -148,106 +144,10 @@ class _FunctionCollector(ast.NodeVisitor):
         self._scope.pop()
 
 
-type Branch = tuple[int, int]
-
-
-@dataclass(frozen=True, slots=True)
-class _CoverageFile:
-    executed_lines: frozenset[int]
-    missing_lines: frozenset[int]
-    executed_branches: frozenset[Branch]
-    missing_branches: frozenset[Branch]
-
-    def ratio(self, start: int, end: int) -> float | None:
-        executed_lines = {line for line in self.executed_lines if start <= line <= end}
-        missing_lines = {line for line in self.missing_lines if start <= line <= end}
-        executed_branches = {
-            branch for branch in self.executed_branches if start <= branch[0] <= end
-        }
-        missing_branches = {
-            branch for branch in self.missing_branches if start <= branch[0] <= end
-        }
-        executed = len(executed_lines) + len(executed_branches)
-        total = executed + len(missing_lines) + len(missing_branches)
-        return executed / total if total else None
-
-
-def _integer_lines(value: object) -> list[int]:
-    if not isinstance(value, list):
-        return []
-    return [item for item in cast(list[object], value) if isinstance(item, int)]
-
-
-def _branches(value: object) -> list[Branch]:
-    if not isinstance(value, list):
-        return []
-    branches: list[Branch] = []
-    for raw_branch in cast(list[object], value):
-        if not isinstance(raw_branch, list) or len(raw_branch) != 2:
-            continue
-        start, end = cast(list[object], raw_branch)
-        if isinstance(start, int) and isinstance(end, int):
-            branches.append((start, end))
-    return branches
-
-
-def _coverage_source(root: Path, name: str) -> Path:
-    source = Path(name)
-    return source.resolve() if source.is_absolute() else (root / source).resolve()
-
-
-def _coverage_file(value: object) -> _CoverageFile | None:
-    if not isinstance(value, dict):
-        return None
-    data = cast(dict[str, object], value)
-    return _CoverageFile(
-        executed_lines=frozenset(_integer_lines(data.get("executed_lines"))),
-        missing_lines=frozenset(_integer_lines(data.get("missing_lines"))),
-        executed_branches=frozenset(_branches(data.get("executed_branches"))),
-        missing_branches=frozenset(_branches(data.get("missing_branches"))),
-    )
-
-
-class _CoverageIndex:
-    def __init__(self, files: dict[Path, _CoverageFile], error: str | None = None) -> None:
-        self._files = files
-        self.error = error
-
-    @classmethod
-    def load(cls, path: Path | None) -> _CoverageIndex:
-        if path is None:
-            return cls({})
-        if not path.exists():
-            return cls({}, f"Coverage report not found: {path}")
-        try:
-            raw = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
-        except (OSError, JSONDecodeError, TypeError) as error:
-            return cls({}, f"Unable to read coverage report {path}: {error}")
-
-        raw_files = raw.get("files")
-        if not isinstance(raw_files, dict):
-            return cls({}, f"Coverage report has no valid files table: {path}")
-
-        root = path.resolve().parent
-        files: dict[Path, _CoverageFile] = {}
-        for name, raw_data in cast(dict[object, object], raw_files).items():
-            if not isinstance(name, str):
-                continue
-            coverage_file = _coverage_file(raw_data)
-            if coverage_file is not None:
-                files[_coverage_source(root, name)] = coverage_file
-        if not files:
-            return cls({}, f"Coverage report contains no measured Python files: {path}")
-        return cls(files)
-
-    def for_path(self, path: Path) -> _CoverageFile | None:
-        return self._files.get(path.resolve())
-
-
-def _display_path(path: Path) -> Path:
+def _display_path(path: Path, root: Path) -> Path:
     resolved = path.resolve()
     try:
-        return resolved.relative_to(Path.cwd().resolve())
+        return resolved.relative_to(root.resolve())
     except ValueError:
         return path
 
@@ -380,14 +280,25 @@ def _syntax_finding(path: Path, error: OSError | SyntaxError) -> Finding:
     )
 
 
-def _coverage_finding(coverage_path: Path, error: str) -> Finding:
+def _coverage_finding(coverage_path: Path, error: str, root: Path) -> Finding:
     return Finding(
         rule_id="EPK002",
         message=error,
-        path=_display_path(coverage_path),
+        path=_display_path(coverage_path, root),
         line=1,
         severity=Severity.ERROR,
         suggestion="Generate a valid Coverage.py JSON report before evaluating CRAP.",
+    )
+
+
+def _missing_source_coverage_finding(path: Path) -> Finding:
+    return Finding(
+        rule_id="EPK002",
+        message=f"Coverage report does not measure analyzed source: {path}",
+        path=path,
+        line=1,
+        severity=Severity.ERROR,
+        suggestion="Include this source in the Coverage.py JSON report.",
     )
 
 
@@ -484,7 +395,7 @@ def _risk_findings(
 def _function_metric(
     path: Path,
     function: _Function,
-    coverage_file: _CoverageFile | None,
+    coverage_file: CoverageFile | None,
 ) -> FunctionMetric:
     complexity = cyclomatic_complexity(function.node)
     function_coverage = (
@@ -508,10 +419,10 @@ def _analyze_file(
     path: Path,
     roots: tuple[Path, ...],
     config: Config,
-    coverage: _CoverageIndex,
+    coverage: CoverageIndex,
 ) -> AnalysisReport:
     report = AnalysisReport()
-    output_path = _display_path(path)
+    output_path = _display_path(path, config.root)
     generic_finding = _generic_module_finding(output_path, config)
     if generic_finding:
         report.findings.append(generic_finding)
@@ -529,6 +440,14 @@ def _analyze_file(
     collector = _FunctionCollector()
     collector.visit(tree)
     coverage_file = coverage.for_path(path)
+    missing_coverage = (
+        coverage.requested
+        and coverage.error is None
+        and coverage_file is None
+        and bool(collector.functions)
+    )
+    if missing_coverage:
+        report.findings.append(_missing_source_coverage_finding(output_path))
     for function in collector.functions:
         metric = _function_metric(output_path, function, coverage_file)
         report.metrics.append(metric)
@@ -544,10 +463,10 @@ def analyze_paths(
     coverage_path: Path | None = None,
 ) -> AnalysisReport:
     roots = tuple(Path(path) for path in paths)
-    coverage = _CoverageIndex.load(coverage_path)
+    coverage = CoverageIndex.load(coverage_path)
     report = AnalysisReport()
     if coverage_path is not None and coverage.error is not None:
-        report.findings.append(_coverage_finding(coverage_path, coverage.error))
+        report.findings.append(_coverage_finding(coverage_path, coverage.error, config.root))
 
     for path in _iter_python_files(roots):
         file_report = _analyze_file(path, roots, config, coverage)
